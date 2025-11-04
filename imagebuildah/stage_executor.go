@@ -591,6 +591,7 @@ func (s *StageExecutor) performCopy(excludes []string, copies ...imagebuilder.Co
 			Parents:               copy.Parents,
 			Link:                  s.hasLink,
 			BuildMetadata:         labelsAndAnnotations,
+			AllowEmptyWildcards:   true,
 		}
 		if len(copy.Files) > 0 {
 			// If we are copying heredoc files, we need to temporary place

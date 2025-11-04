@@ -111,7 +111,8 @@ type AddAndCopyOptions struct {
 	// imagebuildah for cache evaluation of linked layers (inheritLabels, unsetAnnotations,
 	// inheritAnnotations, newAnnotations). This field is internally managed and should
 	// not be set by external API users.
-	BuildMetadata string
+	BuildMetadata       string
+	AllowEmptyWildcards bool
 }
 
 // gitURLFragmentSuffix matches fragments to use as Git reference and build
@@ -379,8 +380,14 @@ func (b *Builder) Add(destination string, extract bool, options AddAndCopyOption
 			return fmt.Errorf("checking on sources under %q: %w", contextDir, err)
 		}
 	}
+	// TODO: 厳密にwildcardの時だけにしたい
+	// ただ`if itemsCopied == 0 {`のエラーにはなるので問題ないか？
 	numLocalSourceItems := 0
 	for _, localSourceStat := range localSourceStats {
+		if options.AllowEmptyWildcards && len(localSourceStat.Globbed) == 0 {
+			continue
+		}
+
 		if localSourceStat.Error != "" {
 			errorText := localSourceStat.Error
 			rel, err := filepath.Rel(contextDir, localSourceStat.Glob)
@@ -397,9 +404,9 @@ func (b *Builder) Add(destination string, extract bool, options AddAndCopyOption
 		}
 		numLocalSourceItems += len(localSourceStat.Globbed)
 	}
-	if numLocalSourceItems+len(remoteSources)+len(gitSources) == 0 {
-		return fmt.Errorf("no sources %v found: %w", sources, syscall.ENOENT)
-	}
+	// if (!options.AllowEmptyWildcards && numLocalSourceItems == 0) || (numLocalSourceItems+len(remoteSources)+len(gitSources) == 0) {
+	// 	return fmt.Errorf("no sources %v found: %w", sources, syscall.ENOENT)
+	// }
 
 	// Find out which user (and group) the destination should belong to.
 	var chownDirs, chownFiles *idtools.IDPair
@@ -447,7 +454,7 @@ func (b *Builder) Add(destination string, extract bool, options AddAndCopyOption
 		if len(remoteSources) == 1 {
 			destCanBeFile = sourceIsRemote(sources[0])
 		}
-		if len(localSources) == 1 {
+		if len(localSources) == 1 && numLocalSourceItems == 1 {
 			item := localSourceStats[0].Results[localSourceStats[0].Globbed[0]]
 			if item.IsDir || (item.IsArchive && extract) {
 				destMustBeDirectory = true

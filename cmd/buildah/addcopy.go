@@ -266,6 +266,7 @@ func addAndCopyCmd(c *cobra.Command, args []string, verb string, iopts addCopyRe
 		Parents:               iopts.parents,
 		Timestamp:             timestamp,
 		Link:                  iopts.link,
+		AllowEmptyWildcards:   true,
 	}
 	if iopts.contextdir != "" {
 		var excludes []string

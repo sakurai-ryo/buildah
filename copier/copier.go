@@ -271,10 +271,11 @@ type evalResponse struct {
 
 // StatsForGlob encode results for a single glob pattern passed to Stat().
 type StatsForGlob struct {
-	Error   string                  `json:",omitempty"` // error if the Glob pattern was malformed
-	Glob    string                  // input pattern to which this result corresponds
-	Globbed []string                // a slice of zero or more names that match the glob
-	Results map[string]*StatForItem // one for each Globbed value if there are any, or for Glob
+	Error    string                  `json:",omitempty"` // error if the Glob pattern was malformed
+	Glob     string                  // input pattern to which this result corresponds
+	Globbed  []string                // a slice of zero or more names that match the glob
+	Results  map[string]*StatForItem // one for each Globbed value if there are any, or for Glob
+	Wildcard bool                    // true if the glob contained any wildcard characters
 }
 
 // StatForItem encode results for a single filesystem item, as returned by Stat().
@@ -1122,6 +1123,7 @@ func copierHandlerStat(req request, pm *fileutils.PatternMatcher, idMappings *id
 			s.Error = fmt.Sprintf("copier: stat: %q while matching glob pattern %q", err.Error(), glob)
 		}
 
+		// !NOTE: wildcardはここに入る
 		if len(globMatched) == 0 && strings.ContainsAny(glob, "*?[") {
 			continue
 		}
@@ -1222,6 +1224,7 @@ func copierHandlerStat(req request, pm *fileutils.PatternMatcher, idMappings *id
 		}
 		stats = append(stats, &s)
 	}
+	// !NOTE: 最終的にエラーになるのはここ
 	// no matches -> error
 	if len(stats) == 0 {
 		s := StatsForGlob{
